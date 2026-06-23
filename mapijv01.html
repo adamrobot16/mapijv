@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Videó">
+    
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/000000/FFFFFF?text=Video">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Iframe Lejátszó</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .control-panel {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-weight: bold;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #0056b3;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+
+        button:hover { background-color: #004494; }
+
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            overflow: auto; /* Ez engedi a görgetést nagyítás után */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Ez a belső tartály, amit nagyítunk */
+        #iframe-wrapper {
+            width: 100%;
+            height: 100%;
+            transform-origin: top left;
+            transition: transform 0.1s ease-out;
+        }
+
+        iframe {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel">
+        <div class="input-group">
+            <label for="video-url">Beágyazás linkje (Iframe URL):</label>
+            <input type="text" id="video-url" value="https://player.mediadelivery.net/embed/12345/mapij-6789-xyz" placeholder="Illeszd be a linket...">
+        </div>
+        
+        <div class="input-group">
+            <label for="replace-word">A 'mapij' szó lecserélése erre:</label>
+            <input type="text" id="replace-word" value="mapij" placeholder="Írd be a csere szót...">
+        </div>
+        
+        <button id="load-btn">Betöltés</button>
+    </div>
+
+    <div class="video-container" id="viewport">
+        <div id="iframe-wrapper">
+            <iframe 
+                id="player-frame" 
+                src=""
+                loading="lazy" 
+                style="border: none; width: 100%; height: 100%;" 
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
+                allowfullscreen="true">
+            </iframe>
+        </div>
+    </div>
+
+    <script>
+        const videoUrlInput = document.getElementById('video-url');
+        const replaceWordInput = document.getElementById('replace-word');
+        const loadBtn = document.getElementById('load-btn');
+        const iframeWrapper = document.getElementById('iframe-wrapper');
+        const playerFrame = document.getElementById('player-frame');
+        const viewport = document.getElementById('viewport');
+
+        // --- VIDEÓ BETÖLTÉSE ---
+        loadBtn.addEventListener('click', () => {
+            const rawUrl = videoUrlInput.value.trim();
+            const replaceWord = replaceWordInput.value.trim();
+            
+            if (!rawUrl) return;
+
+            // Szó kicserélése a linkben
+            const finalUrl = rawUrl.replaceAll('mapij', replaceWord);
+
+            // Új URL beállítása az iframe-nek
+            playerFrame.src = finalUrl;
+
+            // Betöltéskor visszaállítjuk a nagyítást az alapállapotra
+            currentScale = 1.0;
+            iframeWrapper.style.transform = `scale(${currentScale})`;
+            
+            // Ha fel van nagyítva a keret méretét is hozzá kell igazítani, hogy a görgetősávok jók legyenek
+            iframeWrapper.style.width = '100%';
+            iframeWrapper.style.height = '100%';
+        });
+
+        // --- KÉT UJJAS NAGYÍTÁS (PINCH-TO-ZOOM) A WRAPPEREN ---
+        let currentScale = 1.0;
+        let initialPinchDistance = null;
+        let startPinchScale = 1.0;
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                // Két ujjas érintésnél kiszámoljuk a kezdőtávolságot
+                initialPinchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                startPinchScale = currentScale;
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && initialPinchDistance !== null) {
+                e.preventDefault(); // Megakadályozza a teljes weboldal nagyítását
+
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+
+                // Új méretarány kiszámolása
+                currentScale = startPinchScale * (currentDistance / initialPinchDistance);
+                
+                // Határok beállítása (1.0x - 4.0x nagyítás)
+                currentScale = Math.max(1.0, Math.min(currentScale, 4.0));
+                
+                // Transzformáció alkalmazása a burkoló elemen
+                iframeWrapper.style.transform = `scale(${currentScale})`;
+                
+                // A wrapper fizikai méretét is növeljük, hogy a viewport engedje a görgetést
+                iframeWrapper.style.width = (100 * currentScale) + '%';
+                iframeWrapper.style.height = (100 * currentScale) + '%';
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialPinchDistance = null;
+            }
+        });
+    </script>
+</body>
+</html>
