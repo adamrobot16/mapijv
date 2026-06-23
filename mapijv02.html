@@ -172,3 +172,29 @@
 
                 const currentDistance = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+
+                // Új méretarány kiszámolása
+                currentScale = startPinchScale * (currentDistance / initialPinchDistance);
+                
+                // Határok beállítása (1.0x - 4.0x nagyítás)
+                currentScale = Math.max(1.0, Math.min(currentScale, 4.0));
+                
+                // Transzformáció alkalmazása a burkoló elemen
+                iframeWrapper.style.transform = `scale(${currentScale})`;
+                
+                // A wrapper fizikai méretét is növeljük, hogy a viewport engedje a görgetést
+                iframeWrapper.style.width = (100 * currentScale) + '%';
+                iframeWrapper.style.height = (100 * currentScale) + '%';
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialPinchDistance = null;
+            }
+        });
+    </script>
+</body>
+</html>
