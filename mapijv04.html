@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Lejátszó">
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/111111/FFFFFF?text=%E2%96%B6">
+    
+    <title>Iframe Lejátszó - Lejátszási Listával</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .control-panel {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-weight: bold;
+            color: #333;
+        }
+
+        textarea {
+            resize: vertical;
+            white-space: pre;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #0056b3;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background-color 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button:hover { background-color: #004494; }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .nav-controls button {
+            width: auto;
+            margin: 0;
+            background-color: #6c757d;
+        }
+        .nav-controls button:hover { background-color: #5a6268; }
+        .nav-controls button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+        #counter-text {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        #toggle-mode-btn {
+            background-color: #28a745;
+        }
+        #toggle-mode-btn:hover {
+            opacity: 0.9;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            overflow: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #iframe-wrapper {
+            width: 100%;
+            height: 100%;
+            transform-origin: top left;
+            transition: transform 0.1s ease-out;
+            position: relative;
+        }
+
+        #zoom-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            display: none;
+            background: rgba(0,0,0,0);
+        }
+
+        iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel">
+        <div class="input-group">
+            <label for="video-url">Beágyazás linkjei (Minden link új sorba):</label>
+            <textarea id="video-url" rows="4" placeholder="Illeszd be a linkeket...">
+https://iframe.mapij.net/embed/99914/0c2f9262-7664-465f-8871-5e39eb3e683d
+https://iframe.mapij.net/embed/99914/2e8d302e-3411-4c8c-8318-41ecf2099746
+https://iframe.mapij.net/embed/99914/f3d01122-ccf0-4f1b-bf8f-ce48308365ec
+https://iframe.mapij.net/embed/99914/a2a2e2da-bd77-4ac4-8d25-99f707774d3c
+https://iframe.mapij.net/embed/99914/58594088-1c76-4090-bcfc-f79c80da4982
+https://iframe.mapij.net/embed/99914/cb4130bf-62e6-448a-ab7c-0eee09be1651
+https://iframe.mapij.net/embed/99914/06d92030-23fa-40d4-9e38-35832dc6cd90
+https://iframe.mapij.net/embed/99914/5ca6d05b-c044-4791-8840-9d71fb2d5331
+https://iframe.mapij.net/embed/99914/b4104bdd-c066-4891-864c-c64b96e02a1f
+https://iframe.mapij.net/embed/99914/89374288-4a5f-432b-bc29-0be7427a83b9
+https://iframe.mapij.net/embed/99914/128ffcd4-cc4a-491c-af84-27a031477018
+https://iframe.mapij.net/embed/99914/128ffcd4-cc4a-491c-af84-27a031477018
+https://iframe.mapij.net/embed/99914/c9c61cca-fd75-44d8-8997-9c2bcc6198c1
+https://iframe.mapij.net/embed/99914/dbd1341f-8ae6-4dd5-80a3-10bffff2c8b3
+https://iframe.mapij.net/embed/99914/af6e04f2-1ef3-41d1-a1fc-91d1d4164d72
+https://iframe.mapij.net/embed/99914/40960691-5310-412a-8535-d9d18d7f619e
+https://iframe.mapij.net/embed/99914/0b044f57-ae60-43e2-bcff-8084b200b5e5
+https://iframe.mapij.net/embed/99914/69fb0e16-069a-4b3b-8bc5-18d117a7bbd9
+https://iframe.mapij.net/embed/99914/9e040fcd-bbd8-4b3a-a4ba-4334cb9f1293
+https://iframe.mapij.net/embed/99914/6501b8da-b5a2-4c6d-b864-d8d320379448
+https://iframe.mapij.net/embed/99914/7de1783a-a25d-474e-b458-241ac79a9973
+https://iframe.mapij.net/embed/99914/c85ed14e-29ec-4c62-8a38-4fb837d7420c
+https://iframe.mapij.net/embed/99914/ba2c9d79-163f-4e47-adc3-0d7304f4b125
+https://iframe.mapij.net/embed/99914/2057ae5f-fb15-467e-927f-fb444e4994a3
+https://iframe.mapij.net/embed/99914/c2355eec-30a5-4e61-ad97-a543c7878432
+https://iframe.mapij.net/embed/99914/b3c640c4-7638-496d-96df-235ff77c0e81
+https://iframe.mapij.net/embed/99914/f22e4c58-b374-4d9b-b74d-fea1fb584030
+https://iframe.mapij.net/embed/99914/88659392-e7b4-474a-9727-cc723b983a1d
+https://iframe.mapij.net/embed/99914/305b590c-674b-4d98-8297-cc38468710c0
+https://iframe.mapij.net/embed/99914/9b2d2097-798e-400d-bf1c-9926303d7e3a
+https://iframe.mapij.net/embed/99914/7c46ee70-cdf9-4157-9615-fa1b910a80c1
+https://iframe.mapij.net/embed/99914/62b2b6bf-29a8-4251-acea-790b598aa225
+https://iframe.mapij.net/embed/99914/36d9e9ce-a79b-47b3-a66c-23dea5573986
+https://iframe.mapij.net/embed/99914/4799ce8c-7053-4368-8553-e00e1d2ed32f
+https://iframe.mapij.net/embed/99914/9238eec0-b0af-44de-b65b-3d21abfaf8a4
+https://iframe.mapij.net/embed/99914/9cb66876-f33f-4b2a-a33a-1a98e9ea4dfb
+https://iframe.mapij.net/embed/99914/5c5fca15-9020-4d54-b511-874a563c9d61
+https://iframe.mapij.net/embed/99914/db932492-e967-4658-a8bb-373e4e1ac204
+https://iframe.mapij.net/embed/99914/6961fdf9-4061-4f0f-be26-7d8df9830223
+https://iframe.mapij.net/embed/99914/b3485cde-d2d4-4746-9845-fdd159ff2f4e
+https://iframe.mapij.net/embed/99914/f61292cf-46f5-4146-b7be-43c11908061f
+https://iframe.mapij.net/embed/99914/a73b5617-894c-496a-9ab4-04164ca5dbc3
+https://iframe.mapij.net/embed/99914/819e808f-351c-44b9-bb34-f6ad4437b809
+https://iframe.mapij.net/embed/99914/7c2d6a1a-4a3c-4535-8b08-8f5676048a78
+https://iframe.mapij.net/embed/99914/2cdb0b49-be1c-4f8a-be13-658180725914
+https://iframe.mapij.net/embed/99914/da668649-2e6c-4e7e-ac00-1a48ad22d4f3
+https://iframe.mapij.net/embed/99914/2c83fa66-2880-4d5f-8a00-a33ca507d3e7
+https://iframe.mapij.net/embed/99914/b05bed51-bc0a-44e9-ae8e-469db7082992
+https://iframe.mapij.net/embed/99914/d14886b8-8dd4-4e99-a682-730262fc6181
+https://iframe.mapij.net/embed/99914/d14886b8-8dd4-4e99-a682-730262fc6181
+https://iframe.mapij.net/embed/99914/6fbde3ad-0692-419f-b80a-2da251e57ee3
+https://iframe.mapij.net/embed/99914/b12aa968-aa09-435a-82c6-4380e818bd8a
+https://iframe.mapij.net/embed/99914/8bd7cf2a-ae7e-435f-87d2-327dcc3cf04d
+https://iframe.mapij.net/embed/99914/cf32e9b6-0b65-47ad-bab1-b8741f6ec86e
+https://iframe.mapij.net/embed/99914/68bdcfc4-a19e-4664-9ed6-67380fe57850
+https://iframe.mapij.net/embed/99914/e607a0ae-65f9-4e96-88d6-53e4e4f286a1
+https://iframe.mapij.net/embed/99914/4ae54511-2fa3-4b35-9288-689f29bf9938
+https://iframe.mapij.net/embed/99914/16651d95-f819-4e25-84de-bdc5619600d8
+https://iframe.mapij.net/embed/99914/210d9e56-6420-4055-a6e3-69d3fb8a1253
+https://iframe.mapij.net/embed/99914/9820a9e1-45b5-43bc-977d-240eaaa10c7b
+https://iframe.mapij.net/embed/99914/5817aa97-8d0c-4f07-9820-985a5d9c4a52
+https://iframe.mapij.net/embed/99914/b6629c0d-5acb-4712-9714-d65d7711e5b5
+https://iframe.mapij.net/embed/99914/9a50e4f4-55ce-4900-9901-4e84c000d7e1
+https://iframe.mapij.net/embed/99914/fe67c8f5-47bf-45e0-932c-c3e271069c79
+https://iframe.mapij.net/embed/99914/06687a76-6cf7-4124-857d-7fb41b9ffd1c
+https://iframe.mapij.net/embed/99914/f4727de4-7fc5-457c-b741-1eab969ab6ed
+https://iframe.mapij.net/embed/99914/00afc89e-4457-40d1-89e3-0eaae5f0d875
+https://iframe.mapij.net/embed/99914/bd3d6296-e949-46d0-85aa-144f20abc3c0
+https://iframe.mapij.net/embed/99914/1955faf7-6a8f-4fdd-a50a-13e7fc483bf4
+https://iframe.mapij.net/embed/99914/97714aa7-fa9c-4939-80aa-8cb247cfc427
+https://iframe.mapij.net/embed/99914/e32c5d16-1097-4689-b6ce-497eb1afe39c
+https://iframe.mapij.net/embed/99914/9e6125bc-2d4a-4417-8e1c-190d519a1a24
+https://iframe.mapij.net/embed/99914/42e36584-0b33-4f85-b7a2-0f7311993670
+https://iframe.mapij.net/embed/99914/0f39b844-a8aa-4c8a-b6e3-04b2496e5bc4
+https://iframe.mapij.net/embed/99914/3733c6d0-94da-4955-b972-3945bf0ee371
+https://iframe.mapij.net/embed/99914/ef42536e-97b2-4675-b9cb-d7db1e89ed6b
+https://iframe.mapij.net/embed/99914/df7c9d12-fd66-4bb7-8b61-b56a25d34335
+https://iframe.mapij.net/embed/99914/e5a8e7b7-20c1-4a35-835f-6f2327f781ce
+https://iframe.mapij.net/embed/99914/3fee0ec1-68ef-4c8e-8000-34b0bcce87e5
+https://iframe.mapij.net/embed/99914/e6348aa4-de91-447a-afba-140b2910b837
+https://iframe.mapij.net/embed/99914/ee3c3d30-1a18-4178-ab99-ca3dcd2c494e
+https://iframe.mapij.net/embed/99914/f2392181-5ef9-46bf-ac40-822e9bf1a70f
+https://iframe.mapij.net/embed/99914/35575876-4ac2-4da5-8723-14cd2877a028
+https://iframe.mapij.net/embed/99914/57b7cc7e-cc64-460e-8d2a-674313189cfe
+https://iframe.mapij.net/embed/99914/15cd4e0e-54b5-4b85-9653-255b72959503
+https://iframe.mapij.net/embed/99914/dd14818a-dc15-4da5-8d9b-5d3b035a7471
+https://iframe.mapij.net/embed/99914/08f99a4c-122c-4fd4-b78c-6559317d6358
+https://iframe.mapij.net/embed/99914/267fe46d-349e-4861-a264-dbda23a4ca4c
+https://iframe.mapij.net/embed/99914/2daafed2-37b7-4267-b236-1c2d49665779
+https://iframe.mapij.net/embed/99914/4506d995-1cc2-4dd3-8233-67b18dfc0a62
+https://iframe.mapij.net/embed/99914/94c056d0-b0d4-4559-a41e-0d027e7fd7cc
+https://iframe.mapij.net/embed/99914/63dc823d-f4e0-4737-bbd3-26f772c631c7
+https://iframe.mapij.net/embed/99914/7dc8de96-b7ed-447f-bd37-497147d51520
+https://iframe.mapij.net/embed/99914/92a8b4d5-fcc7-4922-9dc7-6b244d3a1309
+https://iframe.mapij.net/embed/99914/4e354458-6f3b-409f-ab90-3a32a86c07c6
+https://iframe.mapij.net/embed/99914/1fd1567b-77c1-4f7e-a83b-bf645bd0d0ba
+https://iframe.mapij.net/embed/99914/6f6bc713-53bc-420c-9876-3ced0acacea1
+https://iframe.mapij.net/embed/99914/7182a818-62ec-4b4b-b168-c22668c684d1
+https://iframe.mapij.net/embed/99914/9d731a23-9f60-4a2f-8e8c-9491760f0dc1
+https://iframe.mapij.net/embed/99914/4651e8d9-080d-4369-8e37-3c2520778e65
+https://iframe.mapij.net/embed/99914/9196ac3a-1782-46a1-aa44-7cd53348c610
+https://iframe.mapij.net/embed/99914/8d898c41-c7ec-47d4-8344-97c515eab93a
+https://iframe.mapij.net/embed/99914/f396eb0a-f826-40ef-849a-0370fee146ef
+https://iframe.mapij.net/embed/99914/a1475b05-0ec7-4349-9df1-2269a66777f3
+https://iframe.mapij.net/embed/99914/5b675f81-708a-4953-9d27-d1e8628194a5
+https://iframe.mapij.net/embed/99914/90feeb9b-1240-47fd-9151-b08e9111d4fa
+https://iframe.mapij.net/embed/99914/ed414a71-d053-41d4-a76d-47129878ace4
+https://iframe.mapij.net/embed/99914/8c1ab4bf-1829-4f01-b738-d50f4e78aca9
+https://iframe.mapij.net/embed/99914/5f92679d-372d-4025-8721-565b7a4eaeb1
+https://iframe.mapij.net/embed/99914/0fc8b7bc-117d-49fd-b698-32d7550d896b
+https://iframe.mapij.net/embed/99914/05268fc9-682b-47ea-b9bc-27c75093c438
+https://iframe.mapij.net/embed/99914/b1200b1d-07ac-4273-b8b2-c5f7a652d220
+https://iframe.mapij.net/embed/99914/eb01de22-c163-4fd5-a6e3-35e1e6a44a2d
+https://iframe.mapij.net/embed/99914/27e34bc9-80eb-4698-90d7-05a5956d595c
+https://iframe.mapij.net/embed/99914/63ae2062-2ecc-4747-9051-76b83a916295
+https://iframe.mapij.net/embed/99914/d0fc48c7-ee84-43c3-99b1-ebdf96dbe2cf
+https://iframe.mapij.net/embed/99914/310d0f62-c6d1-424b-937d-4d12f5d9422f
+https://iframe.mapij.net/embed/99914/ba5401f9-f9a0-477a-980c-25c86bc0c2f6
+https://iframe.mapij.net/embed/99914/697ea19c-2671-4535-be28-9e1a5867a7f2
+https://iframe.mapij.net/embed/99914/cb8b7efd-678d-45b6-8b6d-a9ba32dbfca5
+https://iframe.mapij.net/embed/99914/8a1eba1c-b4f1-4983-bca3-c740d3d93c89
+https://iframe.mapij.net/embed/99914/a06e7880-0736-4047-958c-1899f394bd42
+https://iframe.mapij.net/embed/99914/9001aea2-82ea-4e4f-a547-1d58832b3f59
+https://iframe.mapij.net/embed/99914/47abee1c-4d63-4a1b-822a-bc95d7b34c53
+https://iframe.mapij.net/embed/99914/673d717f-f296-4368-93dd-f225a5399d1f
+https://iframe.mapij.net/embed/99914/f9f2dc9d-2835-4905-b3fc-9144d28b5858
+https://iframe.mapij.net/embed/99914/aef9f616-f61c-4b72-aabf-ed41e9da7f37
+https://iframe.mapij.net/embed/99914/11f1c637-4f04-48b7-b56d-e00b9c9d1c63
+https://iframe.mapij.net/embed/99914/4a527145-32d6-4ba3-b79b-3e99900c7bf6
+https://iframe.mapij.net/embed/99914/fa0a8697-2d7f-45c2-90bc-b9f10f31295b
+https://iframe.mapij.net/embed/99914/86c23d89-54ea-4bfa-ab55-004a4e22b84e
+https://iframe.mapij.net/embed/99914/518bc2e1-81a2-430c-81ff-a2c2b757cb66
+https://iframe.mapij.net/embed/99914/dd0ef8c6-d904-490f-b8da-c539dd6ba8df
+https://iframe.mapij.net/embed/99914/53e40534-67fc-4edf-b3b7-254f58be0cb9
+https://iframe.mapij.net/embed/99914/dfca9505-9de9-42ad-9f14-5b589e3ff12c
+https://iframe.mapij.net/embed/99914/d9c5cc93-63df-4257-bedc-2c5bdafe9c2f
+https://iframe.mapij.net/embed/99914/8ed56fe8-9d65-47f7-8cd3-01de6925d202
+https://iframe.mapij.net/embed/99914/ee44d5cb-1567-4513-96d3-9756bb90ca3b
+</textarea>
+        </div>
+        
+        <div class="input-group">
+            <label for="replace-word">A 'mapij' szó lecserélése erre:</label>
+            <input type="text" id="replace-word" value="mapij" placeholder="Írd be a csere szót...">
+        </div>
+        
+        <button id="load-btn">Lista Betöltése</button>
+        
+        <div class="nav-controls">
+            <button id="prev-btn" disabled>« Előző</button>
+            <span id="counter-text">0 / 0</span>
+            <button id="next-btn" disabled>Következő »</button>
+        </div>
+
+        <button id="toggle-mode-btn">Mód: VIDEÓ VEZÉRLÉS (Kattints a nagyításhoz!)</button>
+    </div>
+
+    <div class="video-container" id="viewport">
+        <div id="iframe-wrapper">
+            <div id="zoom-overlay"></div>
+            <iframe 
+                id="player-frame" 
+                src=""
+                loading="lazy" 
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
+                allowfullscreen="true">
+            </iframe>
+        </div>
+    </div>
+
+    <script>
+        const videoUrlInput = document.getElementById('video-url');
+        const replaceWordInput = document.getElementById('replace-word');
+        const loadBtn = document.getElementById('load-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const counterText = document.getElementById('counter-text');
+        
+        const iframeWrapper = document.getElementById('iframe-wrapper');
+        const playerFrame = document.getElementById('player-frame');
+        const viewport = document.getElementById('viewport');
+        const zoomOverlay = document.getElementById('zoom-overlay');
+        const toggleModeBtn = document.getElementById('toggle-mode-btn');
+
+        let playlist = [];
+        let currentIndex = 0;
+
+        // --- LISTA ÉS LAPOZÁS LOGIKA ---
+        function updateVideo() {
+            if (playlist.length === 0) return;
+            
+            const rawUrl = playlist[currentIndex];
+            const replaceWord = replaceWordInput.value.trim();
+            const finalUrl = rawUrl.replaceAll('mapij', replaceWord);
+            
+            // Kicseréljük az iframe forrását. A végéhez adunk egy kis paramétert (autoplay=true),
+            // hogy jó eséllyel magától induljon, amikor lapozunk.
+            playerFrame.src = finalUrl + (finalUrl.includes('?') ? '&autoplay=true' : '?autoplay=true');
+
+            counterText.textContent = `${currentIndex + 1} / ${playlist.length}`;
+
+            // Nagyítás reset
+            currentScale = 1.0;
+            iframeWrapper.style.transform = `scale(${currentScale})`;
+            iframeWrapper.style.width = '100%';
+            iframeWrapper.style.height = '100%';
+        }
+
+        loadBtn.addEventListener('click', () => {
+            // Szövegdoboz sorainak beolvasása, üres sorok kiszűrése
+            const lines = videoUrlInput.value.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            if (lines.length === 0) {
+                alert("Kérlek, adj meg legalább egy linket!");
+                return;
+            }
+
+            playlist = lines;
+            currentIndex = 0;
+            
+            prevBtn.disabled = playlist.length <= 1;
+            nextBtn.disabled = playlist.length <= 1;
+
+            updateVideo();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (playlist.length === 0) return;
+            // Ha az utolsónál vagyunk, ugorjon a 0. indexre, különben +1
+            currentIndex = (currentIndex + 1) % playlist.length;
+            updateVideo();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (playlist.length === 0) return;
+            // Ha a legelsőnél vagyunk, ugorjon a lista végére, különben -1
+            currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+            updateVideo();
+        });
+
+        // --- AUTOMATA LÉPTETÉS PRÓBÁLKOZÁSA (Ha a szolgáltató támogatja) ---
+        window.addEventListener('message', (event) => {
+            try {
+                let data = event.data;
+                // Ha stringként jön a JSON, megpróbáljuk objektummá alakítani
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch(e) {}
+                }
+                
+                // Keresünk tipikus "videó vége" üzeneteket
+                if (data === 'ended' || data.event === 'ended' || data.message === 'ended') {
+                    nextBtn.click(); // Rányomunk szoftveresen a következő gombra
+                }
+            } catch(e) {}
+        });
+
+        // --- MÓD VÁLTÓGOMB LOGIKA ---
+        let isZoomMode = false;
+        
+        toggleModeBtn.addEventListener('click', () => {
+            isZoomMode = !isZoomMode;
+            if (isZoomMode) {
+                toggleModeBtn.textContent = 'Mód: NAGYÍTÁS ÉS MOZGATÁS (Kattints ide a vezérléshez!)';
+                toggleModeBtn.style.backgroundColor = '#dc3545';
+                zoomOverlay.style.display = 'block';
+            } else {
+                toggleModeBtn.textContent = 'Mód: VIDEÓ VEZÉRLÉS (Kattints ide a nagyításhoz!)';
+                toggleModeBtn.style.backgroundColor = '#28a745';
+                zoomOverlay.style.display = 'none';
+            }
+        });
+
+        // --- KÉT UJJAS NAGYÍTÁS (PINCH-TO-ZOOM) ---
+        let currentScale = 1.0;
+        let initialPinchDistance = null;
+        let startPinchScale = 1.0;
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2 && isZoomMode) {
+                initialPinchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                startPinchScale = currentScale;
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && initialPinchDistance !== null && isZoomMode) {
+                e.preventDefault();
+
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+
+                currentScale = startPinchScale * (currentDistance / initialPinchDistance);
+                currentScale = Math.max(1.0, Math.min(currentScale, 4.0));
+                
+                iframeWrapper.style.transform = `scale(${currentScale})`;
+                iframeWrapper.style.width = (100 * currentScale) + '%';
+                iframeWrapper.style.height = (100 * currentScale) + '%';
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialPinchDistance = null;
+            }
+        });
+    </script>
+</body>
+</html>
