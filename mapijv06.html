@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Lejátszó">
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/111111/FFFFFF?text=%E2%96%B6">
+    
+    <title>Iframe Lejátszó - Felhő Listákkal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .control-panel {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        textarea, input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-weight: bold;
+            color: #333;
+        }
+
+        select {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+
+        textarea {
+            resize: vertical;
+            white-space: pre;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #0056b3;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background-color 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button:hover { background-color: #004494; }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .nav-controls button {
+            width: auto;
+            margin: 0;
+            background-color: #6c757d;
+        }
+        .nav-controls button:hover { background-color: #5a6268; }
+        .nav-controls button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+        #counter-text {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        #toggle-mode-btn {
+            background-color: #28a745;
+        }
+        #toggle-mode-btn:hover {
+            opacity: 0.9;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            overflow: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #iframe-wrapper {
+            width: 100%;
+            height: 100%;
+            transform-origin: top left;
+            transition: transform 0.1s ease-out;
+            position: relative;
+        }
+
+        #zoom-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            display: none;
+            background: rgba(0,0,0,0);
+        }
+
+        iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel">
+        
+        <div class="input-group">
+            <label for="list-select">Online listák betöltése:</label>
+            <select id="list-select">
+                <option value="default">Saját megadott linkek (alapértelmezett)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="video-url">Beágyazás linkjei (Minden link új sorba):</label>
+            <textarea id="video-url" rows="4" placeholder="Illeszd be a linkeket...">https://player.mapij.net/embed/12345/mapij-6789-xyz</textarea>
+        </div>
+        
+        <div class="input-group">
+            <label for="replace-word">A 'mapij' szó lecserélése erre:</label>
+            <input type="text" id="replace-word" value="mapij" placeholder="Írd be a csere szót...">
+        </div>
+        
+        <button id="load-btn">Lista Betöltése</button>
+        
+        <div class="nav-controls">
+            <button id="prev-btn" disabled>« Előző</button>
+            <span id="counter-text">0 / 0</span>
+            <button id="next-btn" disabled>Következő »</button>
+        </div>
+
+        <button id="toggle-mode-btn">Mód: VIDEÓ VEZÉRLÉS (Kattints a nagyításhoz!)</button>
+    </div>
+
+    <div class="video-container" id="viewport">
+        <div id="iframe-wrapper">
+            <div id="zoom-overlay"></div>
+            <iframe 
+                id="player-frame" 
+                src=""
+                loading="lazy" 
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
+                allowfullscreen="true">
+            </iframe>
+        </div>
+    </div>
+
+    <script>
+        const listSelect = document.getElementById('list-select');
+        const videoUrlInput = document.getElementById('video-url');
+        const replaceWordInput = document.getElementById('replace-word');
+        const loadBtn = document.getElementById('load-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const counterText = document.getElementById('counter-text');
+        
+        const iframeWrapper = document.getElementById('iframe-wrapper');
+        const playerFrame = document.getElementById('player-frame');
+        const viewport = document.getElementById('viewport');
+        const zoomOverlay = document.getElementById('zoom-overlay');
+        const toggleModeBtn = document.getElementById('toggle-mode-btn');
+
+        let playlist = [];
+        let currentIndex = 0;
+
+        // --- GITHUB ONLINE LISTÁK LETÖLTÉSE ---
+        const githubBaseUrl = 'https://raw.githubusercontent.com/adamrobot16/mapijv/refs/heads/main/mapijv_text_';
+        let fetchedLists = {}; // Itt tároljuk a letöltött fájlok tartalmát
+
+        async function fetchExternalLists() {
+            let fileIndex = 1;
+            while (true) {
+                const paddedNum = String(fileIndex).padStart(2, '0');
+                const url = `${githubBaseUrl}${paddedNum}.txt`;
+
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const text = await response.text();
+                        // Felbontjuk sorokra, leszedjük a felesleges szóközöket, és kiszűrjük az üres sorokat
+                        const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                        
+                        if (lines.length > 0) {
+                            const title = lines[0]; // Az első sor a cím
+                            const urlsContent = lines.slice(1).join('\n'); // A többi sor a linkek listája
+
+                            fetchedLists[paddedNum] = urlsContent;
+
+                            const option = document.createElement('option');
+                            option.value = paddedNum;
+                            option.textContent = title;
+                            listSelect.appendChild(option);
+                        }
+                        fileIndex++;
+                    } else {
+                        // Ha egy fájlt nem talál (pl. 404 hiba), megszakítjuk a ciklust
+                        break;
+                    }
+                } catch (e) {
+                    break;
+                }
+            }
+        }
+
+        // Amikor kiválasztasz egy listát a legördülőből
+        listSelect.addEventListener('change', (e) => {
+            const selectedVal = e.target.value;
+            if (selectedVal === 'default') {
+                videoUrlInput.value = "https://player.mediadelivery.net/embed/12345/mapij-6789-xyz";
+            } else if (fetchedLists[selectedVal]) {
+                videoUrlInput.value = fetchedLists[selectedVal];
+                // Miután betette a linkeket, automatikusan rá is nyom a "Lista Betöltése" gombra
+                setTimeout(() => { loadBtn.click(); }, 100);
+            }
+        });
+
+        // Elindítjuk a keresést az oldal betöltésekor
+        fetchExternalLists();
+
+
+        // --- LISTA ÉS LAPOZÁS LOGIKA ---
+        function updateVideo() {
+            if (playlist.length === 0) return;
+            
+            const rawUrl = playlist[currentIndex];
+            const replaceWord = replaceWordInput.value.trim();
+            let finalUrl = rawUrl.replaceAll('mapij', replaceWord);
+            
+            // Kötelező némítás és automata lejátszás paraméterek hozzáadása
+            const autoPlayParams = "autoplay=true&muted=true";
+            finalUrl += (finalUrl.includes('?') ? '&' : '?') + autoPlayParams;
+
+            playerFrame.src = finalUrl;
+            counterText.textContent = `${currentIndex + 1} / ${playlist.length}`;
+
+            // Nagyítás reset
+            currentScale = 1.0;
+            iframeWrapper.style.transform = `scale(${currentScale})`;
+            iframeWrapper.style.width = '100%';
+            iframeWrapper.style.height = '100%';
+        }
+
+        loadBtn.addEventListener('click', () => {
+            const lines = videoUrlInput.value.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            if (lines.length === 0) {
+                alert("Kérlek, adj meg legalább egy linket!");
+                return;
+            }
+
+            playlist = lines;
+            currentIndex = 0;
+            
+            prevBtn.disabled = playlist.length <= 1;
+            nextBtn.disabled = playlist.length <= 1;
+
+            updateVideo();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (playlist.length === 0) return;
+            currentIndex = (currentIndex + 1) % playlist.length;
+            updateVideo();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (playlist.length === 0) return;
+            currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+            updateVideo();
+        });
+
+        // --- AUTOMATA LÉPTETÉS PRÓBÁLKOZÁSA ---
+        window.addEventListener('message', (event) => {
+            try {
+                let data = event.data;
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch(e) {}
+                }
+                
+                if (data === 'ended' || data.event === 'ended' || data.message === 'ended') {
+                    nextBtn.click();
+                }
+            } catch(e) {}
+        });
+
+        // --- MÓD VÁLTÓGOMB LOGIKA ---
+        let isZoomMode = false;
+        
+        toggleModeBtn.addEventListener('click', () => {
+            isZoomMode = !isZoomMode;
+            if (isZoomMode) {
+                toggleModeBtn.textContent = 'Mód: NAGYÍTÁS ÉS MOZGATÁS (Kattints ide a vezérléshez!)';
+                toggleModeBtn.style.backgroundColor = '#dc3545';
+                zoomOverlay.style.display = 'block';
+            } else {
+                toggleModeBtn.textContent = 'Mód: VIDEÓ VEZÉRLÉS (Kattints ide a nagyításhoz!)';
+                toggleModeBtn.style.backgroundColor = '#28a745';
+                zoomOverlay.style.display = 'none';
+            }
+        });
+
+        // --- KÉT UJJAS NAGYÍTÁS (PINCH-TO-ZOOM) ---
+        let currentScale = 1.0;
+        let initialPinchDistance = null;
+        let startPinchScale = 1.0;
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2 && isZoomMode) {
+                initialPinchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                startPinchScale = currentScale;
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && initialPinchDistance !== null && isZoomMode) {
+                e.preventDefault();
+
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+
+                currentScale = startPinchScale * (currentDistance / initialPinchDistance);
+                currentScale = Math.max(1.0, Math.min(currentScale, 4.0));
+                
+                iframeWrapper.style.transform = `scale(${currentScale})`;
+                iframeWrapper.style.width = (100 * currentScale) + '%';
+                iframeWrapper.style.height = (100 * currentScale) + '%';
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialPinchDistance = null;
+            }
+        });
+    </script>
+</body>
+</html>
